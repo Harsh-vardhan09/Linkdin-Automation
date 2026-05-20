@@ -55,7 +55,7 @@ export const login2 = async () => {
 
 export const getJobs = async (keyword) => {
     const searchUrl =
-        `https://www.linkedin.com/search/results/content/?keywords=${encodeURIComponent(keyword)}`;
+        `https://www.linkedin.com/search/results/content/?keywords=${encodeURIComponent(keyword + ' -hotlist')}&datePosted=past-24h&sortBy=date_posted`;
 
     await page.goto(searchUrl);
     await page.waitForTimeout(5000);
