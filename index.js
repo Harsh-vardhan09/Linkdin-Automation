@@ -1,5 +1,5 @@
 import 'dotenv/config'
-import { closed, getJobs, login } from './automation/linkdin.js';
+import { closed, getJobs, login, login2 } from './automation/linkdin.js';
 import sendEmail from './automation/mail.js';
 import { alreadyAppliedEmail, saveAppliedEmail } from './automation/db.js';
 import express from 'express'
@@ -12,6 +12,7 @@ app.get('/', (req, res) => {
 })
 
 app.post('/api/automated/run', async (req, res) => {
+
     const keywords = [
 
         'Java Developer HIRING',
@@ -22,41 +23,66 @@ app.post('/api/automated/run', async (req, res) => {
         'DATA ANALYST HIRING'
     ];
 
-    await login()
+    try {
 
-    for (const keyword of keywords) {
-        console.log(`Searching for ${keyword}`);
+        await login();
 
-        const jobs = await getJobs(keyword);
+        for (const keyword of keywords) {
 
-        console.log(jobs);
+            console.log(`Searching for ${keyword}`);
 
-        for (const job of jobs) {
-            for (const email of job.emails) {
+            const jobs =
+                await getJobs(keyword);
 
-                if (!alreadyAppliedEmail(email)) {
-                    console.log(`Sending to ${email}`);
+            console.log(jobs);
 
-                    await sendEmail(
-                        email,
-                        keyword
+            for (const job of jobs) {
+
+                // Skip invalid email
+                if (!job.email) continue;
+
+                if (!alreadyAppliedEmail(job.email)) {
+
+                    console.log(
+                        `Sending to ${job.email}`
                     );
 
-                    saveAppliedEmail(email);
+                    await sendEmail(
+                        job.email,
+                        job.role || keyword,
+                        job.jobLink,
+                        job.jobDescription   // add this
+                    );
+
+                    saveAppliedEmail(job.email);
 
                 } else {
 
                     console.log(
-                        `Already applied to ${email}`
+                        `Already applied to ${job.email}`
                     );
                 }
             }
-        }
-    }
-    closed();
-    
-})
 
+            // Slow down requests
+            // await page.waitForTimeout(5000);
+        }
+
+        res.json({
+            success: true
+        });
+
+    } catch (err) {
+
+        console.log(err);
+
+        res.status(500).json({
+            success: false,
+            error: err.message
+        });
+
+    }
+});
 
 
 app.listen('8080', () => {
